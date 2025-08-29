@@ -1,9 +1,6 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).parent.parent))
 from utils.pdf_parser import CrossStitchPDFParser
 from typing import Dict, List, Any
 import json

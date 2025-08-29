@@ -1,0 +1,114 @@
+{
+  "page": 1,
+  "size": {
+    "width": 612.0,
+    "height": 792.0
+  },
+  "drawings_count": 1522,
+  "lines": 5843,
+  "rects": 1,
+  "curves": 0,
+  "text_blocks": 467,
+  "sample_drawings": [
+    {
+      "color": null,
+      "fill": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "width": null,
+      "items_count": 1
+    },
+    {
+      "color": [
+        0.49979400634765625,
+        0.49985504150390625,
+        0.49976348876953125
+      ],
+      "fill": null,
+      "width": 0.699999988079071,
+      "items_count": 1
+    },
+    {
+      "color": null,
+      "fill": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "width": null,
+      "items_count": 4
+    },
+    {
+      "color": null,
+      "fill": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "width": null,
+      "items_count": 4
+    },
+    {
+      "color": null,
+      "fill": [
+        1.0,
+        1.0,
+        0.9960784316062927
+      ],
+      "width": null,
+      "items_count": 4
+    },
+    {
+      "color": null,
+      "fill": [
+        1.0,
+        1.0,
+        0.9960784316062927
+      ],
+      "width": null,
+      "items_count": 4
+    },
+    {
+      "color": null,
+      "fill": [
+        1.0,
+        1.0,
+        0.9960784316062927
+      ],
+      "width": null,
+      "items_count": 4
+    },
+    {
+      "color": null,
+      "fill": [
+        1.0,
+        1.0,
+        0.9960784316062927
+      ],
+      "width": null,
+      "items_count": 4
+    },
+    {
+      "color": null,
+      "fill": [
+        1.0,
+        1.0,
+        0.9960784316062927
+      ],
+      "width": null,
+      "items_count": 4
+    },
+    {
+      "color": null,
+      "fill": [
+        1.0,
+        1.0,
+        0.9960784316062927
+      ],
+      "width": null,
+      "items_count": 4
+    }
+  ]
+}

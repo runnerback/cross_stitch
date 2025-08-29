@@ -9,8 +9,8 @@ class CrossStitchPDFParser:
     """Cross Stitch PDF解析器"""
     
     def __init__(self):
-        self.grid_tolerance = 2  # 网格检测容差（像素）
-        self.min_grid_lines = 10  # 最少网格线数量
+        self.grid_tolerance = 1  # 网格检测容差（像素）
+        self.min_grid_lines = 5  # 最少网格线数量（降低阈值）
         
     def parse(self, pdf_bytes: bytes) -> Dict[str, Any]:
         """
@@ -35,7 +35,10 @@ class CrossStitchPDFParser:
             
             # 收集颜色和符号
             if page_data.get("colors"):
-                all_colors.update(page_data["colors"])
+                # 从颜色字典列表中提取hex值
+                for color in page_data["colors"]:
+                    if isinstance(color, dict) and "hex" in color:
+                        all_colors.add(color["hex"])
             if page_data.get("symbols"):
                 all_symbols.extend(page_data["symbols"])
         
@@ -91,9 +94,12 @@ class CrossStitchPDFParser:
         horizontal_lines = []
         vertical_lines = []
         
+        # 统计所有线条
+        line_count = 0
         for drawing in drawings:
             for item in drawing.get("items", []):
                 if item[0] == "l":  # 线条
+                    line_count += 1
                     p1, p2 = item[1], item[2]
                     
                     # 检测水平线
@@ -101,7 +107,8 @@ class CrossStitchPDFParser:
                         horizontal_lines.append({
                             "y": (p1.y + p2.y) / 2,
                             "x1": min(p1.x, p2.x),
-                            "x2": max(p1.x, p2.x)
+                            "x2": max(p1.x, p2.x),
+                            "length": abs(p2.x - p1.x)
                         })
                     
                     # 检测垂直线
@@ -109,8 +116,18 @@ class CrossStitchPDFParser:
                         vertical_lines.append({
                             "x": (p1.x + p2.x) / 2,
                             "y1": min(p1.y, p2.y),
-                            "y2": max(p1.y, p2.y)
+                            "y2": max(p1.y, p2.y),
+                            "length": abs(p2.y - p1.y)
                         })
+        
+        print(f"检测到 {line_count} 条线，其中水平线 {len(horizontal_lines)} 条，垂直线 {len(vertical_lines)} 条")
+        
+        # 过滤短线，只保留较长的网格线
+        min_length = 50  # 最小线长
+        horizontal_lines = [l for l in horizontal_lines if l["length"] > min_length]
+        vertical_lines = [l for l in vertical_lines if l["length"] > min_length]
+        
+        print(f"过滤后：水平线 {len(horizontal_lines)} 条，垂直线 {len(vertical_lines)} 条")
         
         # 分析网格
         if len(horizontal_lines) >= self.min_grid_lines and len(vertical_lines) >= self.min_grid_lines:
@@ -130,9 +147,14 @@ class CrossStitchPDFParser:
         h_spacings = [h_lines[i+1]["y"] - h_lines[i]["y"] for i in range(len(h_lines)-1)]
         v_spacings = [v_lines[i+1]["x"] - v_lines[i]["x"] for i in range(len(v_lines)-1)]
         
+        print(f"水平间距样本: {h_spacings[:10] if h_spacings else []}")
+        print(f"垂直间距样本: {v_spacings[:10] if v_spacings else []}")
+        
         # 找出最常见的间距（即格子大小）
-        cell_height = self.find_common_spacing(h_spacings)
-        cell_width = self.find_common_spacing(v_spacings)
+        cell_height = self.find_common_spacing(h_spacings) if h_spacings else 0
+        cell_width = self.find_common_spacing(v_spacings) if v_spacings else 0
+        
+        print(f"检测到的格子大小: {cell_width:.2f} x {cell_height:.2f}")
         
         # 确定网格边界
         grid_top = h_lines[0]["y"]
@@ -140,9 +162,17 @@ class CrossStitchPDFParser:
         grid_left = v_lines[0]["x"]
         grid_right = v_lines[-1]["x"]
         
-        # 计算行列数
-        rows = int((grid_bottom - grid_top) / cell_height) if cell_height > 0 else 0
-        cols = int((grid_right - grid_left) / cell_width) if cell_width > 0 else 0
+        # 计算行列数 - 基于线条数量而不是间距
+        rows = len(h_lines) - 1  # 线条数减1等于格子数
+        cols = len(v_lines) - 1
+        
+        # 如果格子大小为0，尝试根据边界和行列数计算
+        if cell_width == 0 and cols > 0:
+            cell_width = (grid_right - grid_left) / cols
+        if cell_height == 0 and rows > 0:
+            cell_height = (grid_bottom - grid_top) / rows
+        
+        print(f"网格: {rows} 行 x {cols} 列")
         
         return {
             "detected": True,
@@ -189,6 +219,11 @@ class CrossStitchPDFParser:
         bounds = grid["bounds"]
         cell_width = grid["cell_width"]
         cell_height = grid["cell_height"]
+        
+        # 检查cell_width和cell_height是否为0，避免除零错误
+        if cell_width == 0 or cell_height == 0:
+            print(f"警告: 网格单元大小为0 (宽:{cell_width}, 高:{cell_height})，跳过针迹提取")
+            return []
         
         # 遍历所有绘图元素，查找十字或其他符号
         for drawing in drawings:
@@ -261,14 +296,18 @@ class CrossStitchPDFParser:
                         # 检查是否是单个字符（可能是符号）
                         if len(text) == 1 and not text.isspace():
                             bbox = span.get("bbox", [])
-                            if bbox and grid:
-                                # 计算符号所在的格子位置
-                                center_x = (bbox[0] + bbox[2]) / 2
-                                center_y = (bbox[1] + bbox[3]) / 2
+                            if bbox and grid and grid.get("bounds"):
+                                # 检查网格单元大小是否有效
+                                cell_width = grid.get("cell_width", 0)
+                                cell_height = grid.get("cell_height", 0)
                                 
-                                if grid.get("bounds"):
-                                    grid_x = int((center_x - grid["bounds"]["left"]) / grid["cell_width"])
-                                    grid_y = int((center_y - grid["bounds"]["top"]) / grid["cell_height"])
+                                if cell_width > 0 and cell_height > 0:
+                                    # 计算符号所在的格子位置
+                                    center_x = (bbox[0] + bbox[2]) / 2
+                                    center_y = (bbox[1] + bbox[3]) / 2
+                                    
+                                    grid_x = int((center_x - grid["bounds"]["left"]) / cell_width)
+                                    grid_y = int((center_y - grid["bounds"]["top"]) / cell_height)
                                     
                                     symbols.append({
                                         "symbol": text,

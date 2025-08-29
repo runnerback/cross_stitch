@@ -1,6 +1,10 @@
-PyMuPDF==1.26.4
+# PDF处理
+PyMuPDF==1.26.4  # PDF解析和SVG转换
+
+# Web框架
 fastapi==0.116.1
 uvicorn[standard]==0.35.0
 python-multipart==0.0.20
+
 # 图像处理
 pillow==11.3.0  # PIL图像处理库
